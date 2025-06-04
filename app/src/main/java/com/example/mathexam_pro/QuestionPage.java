@@ -14,7 +14,7 @@ import java.util.List;
 
 public class QuestionPage extends AppCompatActivity {
 
-    private Button option1, option2, option3, option4, submitBtn, nextBtn, previousBtn, skipped;
+    private Button option1, option2, option3, option4, submitBtn, nextBtn, previousBtn, skipped, resetBtn;
     private TextView description, skipRemain;
 
     private Button[] choiceButtons;
@@ -29,6 +29,7 @@ public class QuestionPage extends AppCompatActivity {
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_question_page);
 
+        // Initialize buttons and text
         option1 = findViewById(R.id.option1);
         option2 = findViewById(R.id.option2);
         option3 = findViewById(R.id.option3);
@@ -39,28 +40,20 @@ public class QuestionPage extends AppCompatActivity {
         description = findViewById(R.id.description);
         skipped = findViewById(R.id.skipped);
         skipRemain = findViewById(R.id.skipRemain);
+        resetBtn = findViewById(R.id.resetBtn);
 
         choiceButtons = new Button[]{option1, option2, option3, option4};
 
-        // Load random 5 questions wrapped as QuestionStates
-        List<Question> rawQuestions = QuestionBank.getRandomQuestions(5);
-        questionStates = new ArrayList<>();
-        for (Question q : rawQuestions) {
-            questionStates.add(new QuestionState(q));
-        }
+        // Load initial questions
+        loadNewQuestions();
 
-        loadQuestion(currentQuestionIndex);
-        updatePreviousButtonVisibility();
-
-        // Setup choice buttons click to select option
+        // Set choice button listeners
         for (int i = 0; i < choiceButtons.length; i++) {
             int finalI = i;
             choiceButtons[i].setOnClickListener(v -> {
-                // Save selected option index
                 QuestionState qs = questionStates.get(currentQuestionIndex);
                 qs.setSelectedChoiceIndex(finalI);
 
-                // Highlight selected button and reset others
                 for (int j = 0; j < choiceButtons.length; j++) {
                     choiceButtons[j].setBackgroundColor(getResources().getColor(android.R.color.darker_gray));
                     choiceButtons[j].setEnabled(true);
@@ -85,9 +78,7 @@ public class QuestionPage extends AppCompatActivity {
             }
         });
 
-        submitBtn.setOnClickListener(v -> {
-            checkAnswer();
-        });
+        submitBtn.setOnClickListener(v -> checkAnswer());
 
         skipped.setOnClickListener(v -> {
             QuestionState qs = questionStates.get(currentQuestionIndex);
@@ -105,13 +96,10 @@ public class QuestionPage extends AppCompatActivity {
             if (!qs.isSubmitted()) {
                 qs.setSkipped(true);
                 qs.setSubmitted(true); // Mark as submitted so it can't be answered
-
-                remainingSkips--;             // Decrement skips
-                updateSkipText();             // Update the skip text view
-
+                remainingSkips--;
+                updateSkipText();
                 Toast.makeText(this, "Question skipped!", Toast.LENGTH_SHORT).show();
 
-                // Move to next question
                 if (currentQuestionIndex < questionStates.size() - 1) {
                     currentQuestionIndex++;
                     loadQuestion(currentQuestionIndex);
@@ -122,7 +110,24 @@ public class QuestionPage extends AppCompatActivity {
             }
         });
 
+        resetBtn.setOnClickListener(v -> {
+            remainingSkips = 2;
+            updateSkipText();
+            loadNewQuestions();
+            Toast.makeText(this, "Quiz has been reset!", Toast.LENGTH_SHORT).show();
+        });
 
+        updateSkipText();
+    }
+
+    private void loadNewQuestions() {
+        questionStates = new ArrayList<>();
+        for (Question q : QuestionBank.getRandomQuestions(5)) {
+            questionStates.add(new QuestionState(q));
+        }
+        currentQuestionIndex = 0;
+        loadQuestion(currentQuestionIndex);
+        updatePreviousButtonVisibility();
     }
 
     private void updateSkipText() {
@@ -134,7 +139,6 @@ public class QuestionPage extends AppCompatActivity {
         Question q = qs.getQuestion();
 
         description.setText(q.getQuestionText());
-
         List<String> options = q.getOptions();
         int selected = qs.getSelectedChoiceIndex();
         int correct = q.getCorrectAnswerIndex();
@@ -164,10 +168,7 @@ public class QuestionPage extends AppCompatActivity {
         } else if (selected != -1) {
             choiceButtons[selected].setBackgroundColor(getResources().getColor(R.color.teal_200));
         }
-
     }
-
-
 
     private void updatePreviousButtonVisibility() {
         previousBtn.setVisibility(currentQuestionIndex == 0 ? View.GONE : View.VISIBLE);
@@ -188,9 +189,8 @@ public class QuestionPage extends AppCompatActivity {
             return;
         }
 
-        qs.setSubmitted(true); // Mark this question as submitted
+        qs.setSubmitted(true);
 
-        // Disable buttons and show correct/incorrect
         for (int i = 0; i < choiceButtons.length; i++) {
             choiceButtons[i].setEnabled(false);
             if (i == correct) {
