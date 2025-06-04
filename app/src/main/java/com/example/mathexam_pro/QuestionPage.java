@@ -1,5 +1,6 @@
 package com.example.mathexam_pro;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
@@ -29,7 +30,7 @@ public class QuestionPage extends AppCompatActivity {
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_question_page);
 
-        // Initialize buttons and text
+        // Initialize UI components
         option1 = findViewById(R.id.option1);
         option2 = findViewById(R.id.option2);
         option3 = findViewById(R.id.option3);
@@ -44,10 +45,10 @@ public class QuestionPage extends AppCompatActivity {
 
         choiceButtons = new Button[]{option1, option2, option3, option4};
 
-        // Load initial questions
+        // Load questions
         loadNewQuestions();
 
-        // Set choice button listeners
+        // Answer selection
         for (int i = 0; i < choiceButtons.length; i++) {
             int finalI = i;
             choiceButtons[i].setOnClickListener(v -> {
@@ -95,7 +96,7 @@ public class QuestionPage extends AppCompatActivity {
 
             if (!qs.isSubmitted()) {
                 qs.setSkipped(true);
-                qs.setSubmitted(true); // Mark as submitted so it can't be answered
+                qs.setSubmitted(true); // Prevent future submission
                 remainingSkips--;
                 updateSkipText();
                 Toast.makeText(this, "Question skipped!", Toast.LENGTH_SHORT).show();
@@ -105,7 +106,7 @@ public class QuestionPage extends AppCompatActivity {
                     loadQuestion(currentQuestionIndex);
                     updatePreviousButtonVisibility();
                 } else {
-                    Toast.makeText(this, "End of questions", Toast.LENGTH_SHORT).show();
+                    goToResultPage();
                 }
             }
         });
@@ -155,7 +156,6 @@ public class QuestionPage extends AppCompatActivity {
                 btn.setBackgroundColor(getResources().getColor(android.R.color.darker_gray));
             }
             Toast.makeText(this, "This question was skipped.", Toast.LENGTH_SHORT).show();
-
         } else if (qs.isSubmitted()) {
             for (int i = 0; i < choiceButtons.length; i++) {
                 choiceButtons[i].setEnabled(false);
@@ -201,5 +201,39 @@ public class QuestionPage extends AppCompatActivity {
                 choiceButtons[i].setBackgroundColor(getResources().getColor(android.R.color.darker_gray));
             }
         }
+
+        // Go to results if this was the last question
+        if (currentQuestionIndex == questionStates.size() - 1) {
+            goToResultPage();
+        }
+    }
+
+    private void goToResultPage() {
+        int totalQuestions = questionStates.size();
+        int answered = 0;
+        int skipped = 0;
+        int correct = 0;
+
+        for (QuestionState qs : questionStates) {
+            if (qs.isSkipped()) {
+                skipped++;
+            } else if (qs.isSubmitted()) {
+                answered++;
+                if (qs.getSelectedChoiceIndex() == qs.getQuestion().getCorrectAnswerIndex()) {
+                    correct++;
+                }
+            }
+        }
+
+        int scorePercentage = (int) (((double) correct / totalQuestions) * 100);
+
+        Intent intent = new Intent(QuestionPage.this, ResultPage.class);
+        intent.putExtra("total", totalQuestions);
+        intent.putExtra("answered", answered);
+        intent.putExtra("skipped", skipped);
+        intent.putExtra("correct", correct);
+        intent.putExtra("score", scorePercentage);
+        startActivity(intent);
+        finish();
     }
 }
