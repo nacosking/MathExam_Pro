@@ -15,14 +15,13 @@ import java.util.List;
 public class QuestionPage extends AppCompatActivity {
 
     private Button option1, option2, option3, option4, submitBtn, nextBtn, previousBtn, skipped;
-    private TextView description;
+    private TextView description, skipRemain;
 
     private Button[] choiceButtons;
 
     private List<QuestionState> questionStates;
     private int currentQuestionIndex = 0;
-    private int lastShownPercentage = 0; // The score shown last time
-
+    private int remainingSkips = 2;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -39,6 +38,7 @@ public class QuestionPage extends AppCompatActivity {
         previousBtn = findViewById(R.id.previousBtn);
         description = findViewById(R.id.description);
         skipped = findViewById(R.id.skipped);
+        skipRemain = findViewById(R.id.skipRemain);
 
         choiceButtons = new Button[]{option1, option2, option3, option4};
 
@@ -93,14 +93,21 @@ public class QuestionPage extends AppCompatActivity {
             QuestionState qs = questionStates.get(currentQuestionIndex);
 
             if (qs.isSkipped()) {
-                // Already skipped
                 Toast.makeText(this, "This question was already skipped!", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            if (remainingSkips <= 0) {
+                Toast.makeText(this, "No skips remaining!", Toast.LENGTH_SHORT).show();
                 return;
             }
 
             if (!qs.isSubmitted()) {
                 qs.setSkipped(true);
                 qs.setSubmitted(true); // Mark as submitted so it can't be answered
+
+                remainingSkips--;             // Decrement skips
+                updateSkipText();             // Update the skip text view
 
                 Toast.makeText(this, "Question skipped!", Toast.LENGTH_SHORT).show();
 
@@ -114,6 +121,12 @@ public class QuestionPage extends AppCompatActivity {
                 }
             }
         });
+
+
+    }
+
+    private void updateSkipText() {
+        skipRemain.setText("Skips left: " + remainingSkips);
     }
 
     private void loadQuestion(int index) {
