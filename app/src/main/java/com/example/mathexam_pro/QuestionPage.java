@@ -14,13 +14,15 @@ import java.util.List;
 
 public class QuestionPage extends AppCompatActivity {
 
-    private Button option1, option2, option3, option4, submitBtn, nextBtn, previousBtn;
+    private Button option1, option2, option3, option4, submitBtn, nextBtn, previousBtn, skipped;
     private TextView description;
 
     private Button[] choiceButtons;
 
     private List<QuestionState> questionStates;
     private int currentQuestionIndex = 0;
+    private int lastShownPercentage = 0; // The score shown last time
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -36,6 +38,7 @@ public class QuestionPage extends AppCompatActivity {
         nextBtn = findViewById(R.id.nextBtn);
         previousBtn = findViewById(R.id.previousBtn);
         description = findViewById(R.id.description);
+        skipped = findViewById(R.id.skipped);
 
         choiceButtons = new Button[]{option1, option2, option3, option4};
 
@@ -85,6 +88,32 @@ public class QuestionPage extends AppCompatActivity {
         submitBtn.setOnClickListener(v -> {
             checkAnswer();
         });
+
+        skipped.setOnClickListener(v -> {
+            QuestionState qs = questionStates.get(currentQuestionIndex);
+
+            if (qs.isSkipped()) {
+                // Already skipped
+                Toast.makeText(this, "This question was already skipped!", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            if (!qs.isSubmitted()) {
+                qs.setSkipped(true);
+                qs.setSubmitted(true); // Mark as submitted so it can't be answered
+
+                Toast.makeText(this, "Question skipped!", Toast.LENGTH_SHORT).show();
+
+                // Move to next question
+                if (currentQuestionIndex < questionStates.size() - 1) {
+                    currentQuestionIndex++;
+                    loadQuestion(currentQuestionIndex);
+                    updatePreviousButtonVisibility();
+                } else {
+                    Toast.makeText(this, "End of questions", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
     }
 
     private void loadQuestion(int index) {
@@ -94,32 +123,37 @@ public class QuestionPage extends AppCompatActivity {
         description.setText(q.getQuestionText());
 
         List<String> options = q.getOptions();
-        for (int i = 0; i < choiceButtons.length; i++) {
-            choiceButtons[i].setText(options.get(i));
-            //choiceButtons[i].setBackgroundColor(getResources().getColor(android.R.color.darker_gray));
-            choiceButtons[i].setEnabled(true);
-        }
-
         int selected = qs.getSelectedChoiceIndex();
         int correct = q.getCorrectAnswerIndex();
 
-        if (qs.isSubmitted()) {
-            // If submitted, disable all buttons and show correct/wrong highlights
+        for (int i = 0; i < choiceButtons.length; i++) {
+            choiceButtons[i].setText(options.get(i));
+            choiceButtons[i].setBackgroundColor(getResources().getColor(android.R.color.darker_gray));
+            choiceButtons[i].setEnabled(true);
+        }
+
+        if (qs.isSkipped()) {
+            for (Button btn : choiceButtons) {
+                btn.setEnabled(false);
+                btn.setBackgroundColor(getResources().getColor(android.R.color.darker_gray));
+            }
+            Toast.makeText(this, "This question was skipped.", Toast.LENGTH_SHORT).show();
+
+        } else if (qs.isSubmitted()) {
             for (int i = 0; i < choiceButtons.length; i++) {
                 choiceButtons[i].setEnabled(false);
                 if (i == correct) {
                     choiceButtons[i].setBackgroundColor(getResources().getColor(R.color.warm_green));
                 } else if (i == selected) {
                     choiceButtons[i].setBackgroundColor(getResources().getColor(R.color.warm_red));
-                } else {
-                    choiceButtons[i].setBackgroundColor(getResources().getColor(android.R.color.darker_gray));
                 }
             }
         } else if (selected != -1) {
-            // Not submitted yet, but has selected answer
             choiceButtons[selected].setBackgroundColor(getResources().getColor(R.color.teal_200));
         }
+
     }
+
 
 
     private void updatePreviousButtonVisibility() {
@@ -154,12 +188,5 @@ public class QuestionPage extends AppCompatActivity {
                 choiceButtons[i].setBackgroundColor(getResources().getColor(android.R.color.darker_gray));
             }
         }
-
-        if (selected == correct) {
-            Toast.makeText(this, "Correct!", Toast.LENGTH_SHORT).show();
-        } else {
-            Toast.makeText(this, "Incorrect!", Toast.LENGTH_SHORT).show();
-        }
     }
-
 }
