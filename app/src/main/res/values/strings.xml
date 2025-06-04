@@ -1,0 +1,6 @@
+<resources>
+    <string name="app_name">MathExam_Pro</string>
+    <string name="question_capital_india">What is the capital of India?</string>
+    <string name="question_capital_japan">What is the capital of Japan?</string>
+    <string name="question_capital_malaysia">What is the capital of Malaysia?</string>
+</resources>
