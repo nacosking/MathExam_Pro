@@ -62,7 +62,7 @@ public class QuestionPage extends AppCompatActivity {
                     choiceButtons[j].setBackgroundColor(getResources().getColor(android.R.color.darker_gray));
                     choiceButtons[j].setEnabled(true);
                 }
-                choiceButtons[finalI].setBackgroundColor(getResources().getColor(R.color.Green));
+                choiceButtons[finalI].setBackgroundColor(getResources().getColor(R.color.teal_200));
             });
         }
 
@@ -96,16 +96,31 @@ public class QuestionPage extends AppCompatActivity {
         List<String> options = q.getOptions();
         for (int i = 0; i < choiceButtons.length; i++) {
             choiceButtons[i].setText(options.get(i));
-            choiceButtons[i].setBackgroundColor(getResources().getColor(android.R.color.darker_gray));
+            //choiceButtons[i].setBackgroundColor(getResources().getColor(android.R.color.darker_gray));
             choiceButtons[i].setEnabled(true);
         }
 
         int selected = qs.getSelectedChoiceIndex();
-        if (selected != -1) {
-            // Highlight previously selected option
-            choiceButtons[selected].setBackgroundColor(getResources().getColor(R.color.Green));
+        int correct = q.getCorrectAnswerIndex();
+
+        if (qs.isSubmitted()) {
+            // If submitted, disable all buttons and show correct/wrong highlights
+            for (int i = 0; i < choiceButtons.length; i++) {
+                choiceButtons[i].setEnabled(false);
+                if (i == correct) {
+                    choiceButtons[i].setBackgroundColor(getResources().getColor(R.color.warm_green));
+                } else if (i == selected) {
+                    choiceButtons[i].setBackgroundColor(getResources().getColor(R.color.warm_red));
+                } else {
+                    choiceButtons[i].setBackgroundColor(getResources().getColor(android.R.color.darker_gray));
+                }
+            }
+        } else if (selected != -1) {
+            // Not submitted yet, but has selected answer
+            choiceButtons[selected].setBackgroundColor(getResources().getColor(R.color.teal_200));
         }
     }
+
 
     private void updatePreviousButtonVisibility() {
         previousBtn.setVisibility(currentQuestionIndex == 0 ? View.GONE : View.VISIBLE);
@@ -113,6 +128,11 @@ public class QuestionPage extends AppCompatActivity {
 
     private void checkAnswer() {
         QuestionState qs = questionStates.get(currentQuestionIndex);
+        if (qs.isSubmitted()) {
+            Toast.makeText(this, "Answer already submitted!", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         int selected = qs.getSelectedChoiceIndex();
         int correct = qs.getQuestion().getCorrectAnswerIndex();
 
@@ -121,13 +141,15 @@ public class QuestionPage extends AppCompatActivity {
             return;
         }
 
-        // Disable buttons and highlight correct/incorrect
+        qs.setSubmitted(true); // Mark this question as submitted
+
+        // Disable buttons and show correct/incorrect
         for (int i = 0; i < choiceButtons.length; i++) {
             choiceButtons[i].setEnabled(false);
             if (i == correct) {
-                choiceButtons[i].setBackgroundColor(getResources().getColor(R.color.Green));
+                choiceButtons[i].setBackgroundColor(getResources().getColor(R.color.warm_green));
             } else if (i == selected) {
-                choiceButtons[i].setBackgroundColor(getResources().getColor(R.color.Red));
+                choiceButtons[i].setBackgroundColor(getResources().getColor(R.color.warm_red));
             } else {
                 choiceButtons[i].setBackgroundColor(getResources().getColor(android.R.color.darker_gray));
             }
@@ -139,4 +161,5 @@ public class QuestionPage extends AppCompatActivity {
             Toast.makeText(this, "Incorrect!", Toast.LENGTH_SHORT).show();
         }
     }
+
 }
