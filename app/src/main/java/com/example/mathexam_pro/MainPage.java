@@ -13,7 +13,7 @@ import androidx.core.view.WindowInsetsCompat;
 
 public class MainPage extends AppCompatActivity {
 
-    private Button startBtn, scoreBtn;
+    private Button startBtn;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -22,7 +22,6 @@ public class MainPage extends AppCompatActivity {
         setContentView(R.layout.activity_main_page);
 
         startBtn = findViewById(R.id.startBtn);
-        scoreBtn = findViewById(R.id.scoreBtn);
 
         startBtn.setOnClickListener(new View.OnClickListener() {
             @Override

@@ -11,7 +11,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 public class ResultPage extends AppCompatActivity {
 
-    private Button playAgainBtn, backHomeBtn;
+    private Button playAgainBtn, backHomeBtn, reviewBtn;
     private TextView correctResult, questionAnswered, skipUsed;
 
     @Override
@@ -26,6 +26,7 @@ public class ResultPage extends AppCompatActivity {
         correctResult = findViewById(R.id.correctResult);
         questionAnswered = findViewById(R.id.questionAnswered);
         skipUsed = findViewById(R.id.skipUsed);
+        reviewBtn = findViewById(R.id.reviewBtn);
 
         // Retrieve data from intent
         Intent intent = getIntent();
@@ -58,6 +59,12 @@ public class ResultPage extends AppCompatActivity {
             Intent homeIntent = new Intent(ResultPage.this, MainPage.class); // Change if your home is different
             startActivity(homeIntent);
             finish();
+        });
+
+        reviewBtn.setOnClickListener(v -> {
+            Intent intent1 = new Intent(ResultPage.this, QuestionPage.class);
+            intent1.putExtra("isReviewMode", true);
+            startActivity(intent1);
         });
     }
 }

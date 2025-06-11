@@ -15,7 +15,7 @@ import java.util.List;
 
 public class QuestionPage extends AppCompatActivity {
 
-    private Button option1, option2, option3, option4, submitBtn, nextBtn, previousBtn, skipped, resetBtn;
+    private Button option1, option2, option3, option4, submitBtn, nextBtn, previousBtn, skipped, resetBtn, resultBtn;
     private TextView description, skipRemain;
 
     private Button[] choiceButtons;
@@ -23,6 +23,8 @@ public class QuestionPage extends AppCompatActivity {
     private List<QuestionState> questionStates;
     private int currentQuestionIndex = 0;
     private int remainingSkips = 2;
+    private boolean isReviewMode = false;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -30,7 +32,6 @@ public class QuestionPage extends AppCompatActivity {
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_question_page);
 
-        // Initialize UI components
         option1 = findViewById(R.id.option1);
         option2 = findViewById(R.id.option2);
         option3 = findViewById(R.id.option3);
@@ -42,13 +43,13 @@ public class QuestionPage extends AppCompatActivity {
         skipped = findViewById(R.id.skipped);
         skipRemain = findViewById(R.id.skipRemain);
         resetBtn = findViewById(R.id.resetBtn);
+        resultBtn = findViewById(R.id.resultBtn);
+
 
         choiceButtons = new Button[]{option1, option2, option3, option4};
-
-        // Load questions
+        isReviewMode = getIntent().getBooleanExtra("isReviewMode", false);
         loadNewQuestions();
 
-        // Answer selection
         for (int i = 0; i < choiceButtons.length; i++) {
             int finalI = i;
             choiceButtons[i].setOnClickListener(v -> {
@@ -64,18 +65,24 @@ public class QuestionPage extends AppCompatActivity {
         }
 
         nextBtn.setOnClickListener(v -> {
-            if (currentQuestionIndex < questionStates.size() - 1) {
-                currentQuestionIndex++;
-                loadQuestion(currentQuestionIndex);
-                updatePreviousButtonVisibility();
+            for (int i = currentQuestionIndex + 1; i < questionStates.size(); i++) {
+                if (!questionStates.get(i).isSkipped()) {
+                    currentQuestionIndex = i;
+                    loadQuestion(currentQuestionIndex);
+                    updatePreviousButtonVisibility();
+                    break;
+                }
             }
         });
 
         previousBtn.setOnClickListener(v -> {
-            if (currentQuestionIndex > 0) {
-                currentQuestionIndex--;
-                loadQuestion(currentQuestionIndex);
-                updatePreviousButtonVisibility();
+            for (int i = currentQuestionIndex - 1; i >= 0; i--) {
+                if (!questionStates.get(i).isSkipped()) {
+                    currentQuestionIndex = i;
+                    loadQuestion(currentQuestionIndex);
+                    updatePreviousButtonVisibility();
+                    break;
+                }
             }
         });
 
@@ -96,30 +103,68 @@ public class QuestionPage extends AppCompatActivity {
 
             if (!qs.isSubmitted()) {
                 qs.setSkipped(true);
-                qs.setSubmitted(true); // Prevent future submission
+                qs.setSubmitted(true);
                 remainingSkips--;
                 updateSkipText();
                 Toast.makeText(this, "Question skipped!", Toast.LENGTH_SHORT).show();
 
-                if (currentQuestionIndex < questionStates.size() - 1) {
-                    currentQuestionIndex++;
+                boolean moved = false;
+                for (int i = currentQuestionIndex + 1; i < questionStates.size(); i++) {
+                    if (!questionStates.get(i).isSkipped()) {
+                        currentQuestionIndex = i;
+                        moved = true;
+                        break;
+                    }
+                }
+
+                if (!moved) {
+                    for (int i = currentQuestionIndex - 1; i >= 0; i--) {
+                        if (!questionStates.get(i).isSkipped()) {
+                            currentQuestionIndex = i;
+                            moved = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (moved) {
                     loadQuestion(currentQuestionIndex);
                     updatePreviousButtonVisibility();
-                } else {
-                    goToResultPage();
+                    updateNextButtonVisibility(); // <- Add this
+                } else if (allQuestionsHandled()) {
+                    submitBtn.setVisibility(View.GONE);
+                    resultBtn.setVisibility(View.VISIBLE);
                 }
             }
+
+            updateResultButtonVisibility();
+
         });
 
         resetBtn.setOnClickListener(v -> {
             remainingSkips = 2;
             updateSkipText();
             loadNewQuestions();
+            resultBtn.setVisibility(View.GONE);    // <-- Hide result button on reset
+            submitBtn.setVisibility(View.VISIBLE);
             Toast.makeText(this, "Quiz has been reset!", Toast.LENGTH_SHORT).show();
         });
 
+        resultBtn.setOnClickListener(v -> goToResultPage());
+
+
         updateSkipText();
+        updateResultButtonVisibility();
+
+        if (isReviewMode) {
+            submitBtn.setVisibility(View.GONE);
+            skipped.setVisibility(View.GONE);
+            resetBtn.setVisibility(View.GONE);
+            resultBtn.setVisibility(View.GONE);
+        }
+
     }
+
 
     private void loadNewQuestions() {
         questionStates = new ArrayList<>();
@@ -129,7 +174,9 @@ public class QuestionPage extends AppCompatActivity {
         currentQuestionIndex = 0;
         loadQuestion(currentQuestionIndex);
         updatePreviousButtonVisibility();
+        updateNextButtonVisibility(); // <- Add this
     }
+
 
     private void updateSkipText() {
         skipRemain.setText("Skips left: " + remainingSkips);
@@ -147,32 +194,61 @@ public class QuestionPage extends AppCompatActivity {
         for (int i = 0; i < choiceButtons.length; i++) {
             choiceButtons[i].setText(options.get(i));
             choiceButtons[i].setBackgroundColor(getResources().getColor(android.R.color.darker_gray));
-            choiceButtons[i].setEnabled(true);
+            choiceButtons[i].setEnabled(!isReviewMode); // Disable buttons in review
         }
 
-        if (qs.isSkipped()) {
-            for (Button btn : choiceButtons) {
-                btn.setEnabled(false);
-                btn.setBackgroundColor(getResources().getColor(android.R.color.darker_gray));
-            }
-            Toast.makeText(this, "This question was skipped.", Toast.LENGTH_SHORT).show();
-        } else if (qs.isSubmitted()) {
+        if (isReviewMode) {
+            // Highlight correct and selected answers
             for (int i = 0; i < choiceButtons.length; i++) {
-                choiceButtons[i].setEnabled(false);
                 if (i == correct) {
                     choiceButtons[i].setBackgroundColor(getResources().getColor(R.color.warm_green));
                 } else if (i == selected) {
                     choiceButtons[i].setBackgroundColor(getResources().getColor(R.color.warm_red));
                 }
             }
-        } else if (selected != -1) {
-            choiceButtons[selected].setBackgroundColor(getResources().getColor(R.color.teal_200));
+
+            // Show explanation
+            description.append("\n\nExplanation: " + q.getExplanation());
+        } else {
+            if (qs.isSkipped()) {
+                for (Button btn : choiceButtons) {
+                    btn.setEnabled(false);
+                    btn.setBackgroundColor(getResources().getColor(android.R.color.darker_gray));
+                }
+                Toast.makeText(this, "This question was skipped.", Toast.LENGTH_SHORT).show();
+            } else if (qs.isSubmitted()) {
+                for (int i = 0; i < choiceButtons.length; i++) {
+                    choiceButtons[i].setEnabled(false);
+                    if (i == correct) {
+                        choiceButtons[i].setBackgroundColor(getResources().getColor(R.color.warm_green));
+                    } else if (i == selected) {
+                        choiceButtons[i].setBackgroundColor(getResources().getColor(R.color.warm_red));
+                    }
+                }
+            } else if (selected != -1) {
+                choiceButtons[selected].setBackgroundColor(getResources().getColor(R.color.teal_200));
+            }
         }
+
+        updatePreviousButtonVisibility();
+        updateNextButtonVisibility(); // <- add this
     }
+
 
     private void updatePreviousButtonVisibility() {
         previousBtn.setVisibility(currentQuestionIndex == 0 ? View.GONE : View.VISIBLE);
     }
+
+    private void updateNextButtonVisibility() {
+        for (int i = currentQuestionIndex + 1; i < questionStates.size(); i++) {
+            if (!questionStates.get(i).isSkipped()) {
+                nextBtn.setVisibility(View.VISIBLE);
+                return;
+            }
+        }
+        nextBtn.setVisibility(View.GONE);
+    }
+
 
     private void checkAnswer() {
         QuestionState qs = questionStates.get(currentQuestionIndex);
@@ -202,11 +278,33 @@ public class QuestionPage extends AppCompatActivity {
             }
         }
 
-        // Go to results if this was the last question
-        if (currentQuestionIndex == questionStates.size() - 1) {
-            goToResultPage();
+        if (allQuestionsHandled()) {
+            submitBtn.setVisibility(View.GONE);
+            resultBtn.setVisibility(View.VISIBLE);
+        }
+
+        updateResultButtonVisibility();
+    }
+
+    private boolean allQuestionsHandled() {
+        for (QuestionState qs : questionStates) {
+            if (!qs.isSkipped() && !qs.isSubmitted()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private void updateResultButtonVisibility() {
+        if (allQuestionsHandled()) {
+            submitBtn.setVisibility(View.GONE);
+            resultBtn.setVisibility(View.VISIBLE);
+        } else {
+            resultBtn.setVisibility(View.GONE);
+            submitBtn.setVisibility(View.VISIBLE);
         }
     }
+
 
     private void goToResultPage() {
         int totalQuestions = questionStates.size();
