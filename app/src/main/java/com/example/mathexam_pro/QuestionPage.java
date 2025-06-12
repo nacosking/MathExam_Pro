@@ -160,7 +160,7 @@ public class QuestionPage extends AppCompatActivity {
             submitBtn.setVisibility(View.GONE);
             skipped.setVisibility(View.GONE);
             resetBtn.setVisibility(View.GONE);
-            resultBtn.setVisibility(View.GONE);
+            resultBtn.setVisibility(View.VISIBLE);
         }
 
     }
@@ -307,31 +307,45 @@ public class QuestionPage extends AppCompatActivity {
 
 
     private void goToResultPage() {
-        int totalQuestions = questionStates.size();
-        int answered = 0;
-        int skipped = 0;
-        int correct = 0;
+        Intent intent = new Intent(QuestionPage.this, ResultPage.class);
 
-        for (QuestionState qs : questionStates) {
-            if (qs.isSkipped()) {
-                skipped++;
-            } else if (qs.isSubmitted()) {
-                answered++;
-                if (qs.getSelectedChoiceIndex() == qs.getQuestion().getCorrectAnswerIndex()) {
-                    correct++;
+        if (isReviewMode) {
+            // Pass the original result data from intent
+            Intent fromIntent = getIntent();
+            intent.putExtra("total", fromIntent.getIntExtra("total", 0));
+            intent.putExtra("answered", fromIntent.getIntExtra("answered", 0));
+            intent.putExtra("skipped", fromIntent.getIntExtra("skipped", 0));
+            intent.putExtra("correct", fromIntent.getIntExtra("correct", 0));
+            intent.putExtra("score", fromIntent.getIntExtra("score", 0));
+        } else {
+            // Calculate normally
+            int totalQuestions = questionStates.size();
+            int answered = 0;
+            int skipped = 0;
+            int correct = 0;
+
+            for (QuestionState qs : questionStates) {
+                if (qs.isSkipped()) {
+                    skipped++;
+                } else if (qs.isSubmitted()) {
+                    answered++;
+                    if (qs.getSelectedChoiceIndex() == qs.getQuestion().getCorrectAnswerIndex()) {
+                        correct++;
+                    }
                 }
             }
+
+            int scorePercentage = (int) (((double) correct / totalQuestions) * 100);
+
+            intent.putExtra("total", totalQuestions);
+            intent.putExtra("answered", answered);
+            intent.putExtra("skipped", skipped);
+            intent.putExtra("correct", correct);
+            intent.putExtra("score", scorePercentage);
         }
 
-        int scorePercentage = (int) (((double) correct / totalQuestions) * 100);
-
-        Intent intent = new Intent(QuestionPage.this, ResultPage.class);
-        intent.putExtra("total", totalQuestions);
-        intent.putExtra("answered", answered);
-        intent.putExtra("skipped", skipped);
-        intent.putExtra("correct", correct);
-        intent.putExtra("score", scorePercentage);
         startActivity(intent);
         finish();
     }
+
 }

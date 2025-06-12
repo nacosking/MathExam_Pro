@@ -64,7 +64,16 @@ public class ResultPage extends AppCompatActivity {
         reviewBtn.setOnClickListener(v -> {
             Intent intent1 = new Intent(ResultPage.this, QuestionPage.class);
             intent1.putExtra("isReviewMode", true);
+
+            // Pass current result data to review mode
+            intent1.putExtra("total", total);
+            intent1.putExtra("answered", answered);
+            intent1.putExtra("skipped", skipped);
+            intent1.putExtra("correct", correct);
+            intent1.putExtra("score", score);
+
             startActivity(intent1);
+            finish(); // Optional: prevent returning here when back pressed
         });
     }
 }
